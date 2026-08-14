@@ -32,7 +32,6 @@ That's it. When it finishes, a file like `pubmed_screening_2026-08-13_194829.csv
 ## Good to know
 
 - **How it works:** PubMed's own free service finds your matches and hands back their details. Handles up to 10,000 articles per run.
-- **Newest first:** results come out with the most recent articles at the top, matching the "Most recent" order on the PubMed website.
 - **No results?** Try the search on the [PubMed website](https://pubmed.ncbi.nlm.nih.gov/) first. If it returns articles there, it will here too.
 
 ## For advanced users

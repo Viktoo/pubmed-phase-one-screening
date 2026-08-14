@@ -16,6 +16,7 @@ No accounts, API keys, or extra installs are needed - just Python 3.
 import argparse
 import csv
 import os
+import sys
 import time
 import urllib.parse
 import urllib.request
@@ -258,6 +259,77 @@ def write_csv(articles, output_file, fieldnames=FIELDNAMES):
     return len(rows)
 
 
+def ask_year(question, default):
+    while True:
+        answer = input(f"{question} [{default}]: ").strip()
+        if not answer:
+            return default
+        if answer.isdigit() and len(answer) == 4:
+            return int(answer)
+        print("  Please enter a 4-digit year, or press Enter for the default.")
+
+
+def ask_choice(question, default, choices):
+    while True:
+        answer = input(f"{question} [{default}]: ").strip().lower()
+        if not answer:
+            return default
+        if answer in choices:
+            return answer
+        print(f"  Please type one of: {', '.join(choices)}")
+
+
+def ask_yes_no(question, default):
+    hint = "Y/n" if default else "y/N"
+    while True:
+        answer = input(f"{question} [{hint}]: ").strip().lower()
+        if not answer:
+            return default
+        if answer in ("y", "yes"):
+            return True
+        if answer in ("n", "no"):
+            return False
+        print("  Please answer y or n.")
+
+
+def run_interactive(args):
+    """Set up the export by asking four plain questions."""
+    this_year = datetime.now().year
+    print("Let's set up your PubMed export. Just four questions.")
+    print("Press Enter to accept the [answer] in brackets.\n")
+
+    # 1. The search.
+    print("1. Paste your PubMed search below, exactly as it appears in the")
+    print("   search box on the PubMed website, then press Enter.")
+    query = input("   Search: ").strip()
+    if not query:
+        query = DEFAULT_QUERY
+        print("   (No search entered, using the built-in example search.)")
+
+    # 2. Starting year. We always search through the current year.
+    print(f"\n2. From which year onward? (we include everything up to {this_year})")
+    start_year = ask_year("   Start year", args.start_year)
+    end_year = this_year
+
+    # 3. Sort order.
+    print("\n3. What order should the articles be in?")
+    print("     recent    - newest first (default)")
+    print("     relevance - best match")
+    print("     pubdate   - by publication date")
+    print("     author    - first author, A to Z")
+    print("     journal   - journal name, A to Z")
+    sort_key = ask_choice("   Sort by", args.sort, SORT_OPTIONS)
+
+    # 4. Which columns.
+    print("\n4. Include all columns (journal, year, DOI, links, screening notes)?")
+    print("   Answer No to keep only Authors, Title, and Abstract.")
+    all_columns = ask_yes_no("   All columns?", not args.simple)
+    simple = not all_columns
+
+    print()
+    return query, start_year, end_year, sort_key, simple
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Export live PubMed results to a Phase 1 screening CSV."
@@ -276,8 +348,8 @@ def main():
     )
     parser.add_argument(
         "--query",
-        default=DEFAULT_QUERY,
-        help="Optional custom PubMed query (default: embedded review query).",
+        default=None,
+        help="PubMed search. If omitted, the tool asks you step by step.",
     )
     parser.add_argument(
         "--email",
@@ -302,19 +374,24 @@ def main():
     )
     args = parser.parse_args()
 
-    if args.start_year > args.end_year:
-        parser.error("--start-year cannot be later than --end-year")
+    # No search given and a real terminal is attached: ask step by step.
+    if args.query is None and sys.stdin.isatty():
+        search, start_year, end_year, sort_key, simple = run_interactive(args)
+    else:
+        search = args.query or DEFAULT_QUERY
+        start_year, end_year = args.start_year, args.end_year
+        sort_key, simple = args.sort, args.simple
 
-    query = (
-        f"({args.query}) AND "
-        f"{args.start_year}:{args.end_year}[Publication Date]"
-    )
+    if start_year > end_year:
+        parser.error("start year cannot be later than end year")
+
+    query = f"({search}) AND {start_year}:{end_year}[Publication Date]"
     timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
     output_file = args.output or f"pubmed_screening_{timestamp}.csv"
 
     print("Searching PubMed...")
     total_count, pmids = search_pubmed(
-        query, email=args.email, sort=SORT_OPTIONS[args.sort]
+        query, email=args.email, sort=SORT_OPTIONS[sort_key]
     )
     print(f"PubMed reports {total_count} matching articles.")
 
@@ -325,7 +402,7 @@ def main():
         return
 
     articles = fetch_articles(pmids, email=args.email)
-    fieldnames = SIMPLE_FIELDNAMES if args.simple else FIELDNAMES
+    fieldnames = SIMPLE_FIELDNAMES if simple else FIELDNAMES
     count = write_csv(articles, output_file, fieldnames=fieldnames)
     print(f"Done. Wrote {count} articles to {output_file}")
 

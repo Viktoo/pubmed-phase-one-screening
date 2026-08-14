@@ -24,41 +24,24 @@ You need **Python 3** (already on Mac and Linux; [get it here](https://www.pytho
 python3 pubmed_screening.py
 ```
 
-When it finishes, a file like `pubmed_screening_2026-08-13_194829.csv` appears in the folder. Every run makes a new file, so nothing gets overwritten.
+The tool then asks you **four simple questions**:
 
-## Searching
+1. **Your search.** Build your search on the [PubMed website](https://pubmed.ncbi.nlm.nih.gov/) until the results look right, then copy it and paste it in. Whatever works there works here.
+2. **From which year.** Type a starting year, like `2016`. The tool includes everything from that year up to today.
+3. **What order.** Press Enter for newest first, or pick another order (best match, publication date, author, journal).
+4. **Which columns.** Press Enter for all columns, or type `n` to keep just Authors, Title, and Abstract.
 
-Put your search in quotes after `--query`. This is exactly what you'd type into the [PubMed website](https://pubmed.ncbi.nlm.nih.gov/) search box, so if it works there, it works here.
-
-```bash
-python3 pubmed_screening.py --query "(migraine[Title/Abstract]) AND children"
-```
-
-## All options
-
-Add any of these after the command. Combine as many as you like.
-
-| Option | What it does |
-| --- | --- |
-| `--query "..."` | Your PubMed search, in quotes (same as the website search box). |
-| `--simple` | Export only Authors, Title, and Abstract (no other columns). |
-| `--sort recent` | Result order. Choices: `recent` (default), `relevance`, `pubdate`, `author`, `journal`. |
-| `--start-year 2015` | Earliest publication year to include (default: 2019). |
-| `--end-year 2024` | Latest publication year to include (default: this year). |
-| `--output name.csv` | Save to a filename you choose. |
-| `--help` | List every option and exit. |
-
-For example, a simple export of the 10 most recent years, sorted by best match:
-
-```bash
-python3 pubmed_screening.py --simple --start-year 2015 --sort relevance
-```
+That's it. When it finishes, a file like `pubmed_screening_2026-08-13_194829.csv` appears in the folder. Open it in Excel, Numbers, or Google Sheets. Every run makes a new file, so nothing is ever overwritten.
 
 ## Good to know
 
 - **How it works:** PubMed's own free service finds your matches and hands back their details. Handles up to 10,000 articles per run.
-- **Contact email (optional):** PubMed likes to know who's asking. To add yours, put `--email you@example.com` after the command. It stays private.
-- **No results?** Try the search on the [PubMed website](https://pubmed.ncbi.nlm.nih.gov/) first. If it works there, paste the same thing after `--query`.
+- **Newest first:** results come out with the most recent articles at the top, matching the "Most recent" order on the PubMed website.
+- **No results?** Try the search on the [PubMed website](https://pubmed.ncbi.nlm.nih.gov/) first. If it returns articles there, it will here too.
+
+## For advanced users
+
+You can skip the questions by passing options on the command line. Run `python3 pubmed_screening.py --help` to see them all: `--query`, `--start-year`, `--end-year`, `--sort`, `--simple`, `--output`, and `--email`.
 
 ## License
 

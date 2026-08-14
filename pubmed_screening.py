@@ -1,9 +1,21 @@
 #!/usr/bin/env python3
 
-"""Export a live PubMed search to a new Phase 1 screening CSV."""
+"""Export a live PubMed search to a new Phase 1 screening CSV.
+
+Plain-language overview
+-----------------------
+1. Ask PubMed which articles match a search (this is the "ESearch" step).
+2. Download the details for each match: title, abstract, authors, etc.
+   (this is the "EFetch" step).
+3. Save everything to a spreadsheet-friendly CSV file you can open in
+   Excel, Numbers, or Google Sheets and start screening.
+
+No accounts, API keys, or extra installs are needed - just Python 3.
+"""
 
 import argparse
 import csv
+import os
 import time
 import urllib.parse
 import urllib.request
@@ -12,7 +24,10 @@ from datetime import datetime
 
 
 BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
-EMAIL = "your-email@example.com"  # Replace once with your email address.
+# NCBI asks that scripts identify themselves with a contact email so they can
+# reach you if a script misbehaves. It is optional and never shared publicly.
+# Set it with --email, the PUBMED_EMAIL environment variable, or edit this line.
+EMAIL = os.environ.get("PUBMED_EMAIL", "your-email@example.com")
 TOOL_NAME = "pubmed_phase1_screening_export"
 MAX_RESULTS = 10_000
 BATCH_SIZE = 100
@@ -60,12 +75,12 @@ FIELDNAMES = [
 ]
 
 
-def request_xml(endpoint, parameters, attempts=3):
-    parameters = {**parameters, "tool": TOOL_NAME, "email": EMAIL}
+def request_xml(endpoint, parameters, attempts=3, email=EMAIL):
+    parameters = {**parameters, "tool": TOOL_NAME, "email": email}
     url = BASE_URL + endpoint + "?" + urllib.parse.urlencode(parameters)
     request = urllib.request.Request(
         url,
-        headers={"User-Agent": f"{TOOL_NAME}/1.0 ({EMAIL})"},
+        headers={"User-Agent": f"{TOOL_NAME}/1.0 ({email})"},
     )
 
     for attempt in range(1, attempts + 1):
@@ -88,7 +103,7 @@ def unique_join(values, separator="; "):
     return separator.join(dict.fromkeys(value for value in values if value))
 
 
-def search_pubmed(query):
+def search_pubmed(query, email=EMAIL):
     root = request_xml(
         "esearch.fcgi",
         {
@@ -98,13 +113,14 @@ def search_pubmed(query):
             "retmax": MAX_RESULTS,
             "sort": "pub date",
         },
+        email=email,
     )
     total_count = int(root.findtext("./Count", default="0"))
     pmids = [node.text for node in root.findall("./IdList/Id") if node.text]
     return total_count, pmids
 
 
-def fetch_articles(pmids):
+def fetch_articles(pmids, email=EMAIL):
     articles = []
     for start in range(0, len(pmids), BATCH_SIZE):
         batch = pmids[start : start + BATCH_SIZE]
@@ -117,6 +133,7 @@ def fetch_articles(pmids):
                 "retmode": "xml",
                 "rettype": "abstract",
             },
+            email=email,
         )
         articles.extend(root.findall("./PubmedArticle"))
         time.sleep(0.34)
@@ -247,6 +264,16 @@ def main():
         default=DEFAULT_QUERY,
         help="Optional custom PubMed query (default: embedded review query).",
     )
+    parser.add_argument(
+        "--email",
+        default=EMAIL,
+        help="Contact email sent to NCBI (default: PUBMED_EMAIL env var).",
+    )
+    parser.add_argument(
+        "--output",
+        default=None,
+        help="Output CSV path (default: pubmed_screening_<timestamp>.csv).",
+    )
     args = parser.parse_args()
 
     if args.start_year > args.end_year:
@@ -257,10 +284,10 @@ def main():
         f"{args.start_year}:{args.end_year}[Publication Date]"
     )
     timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-    output_file = f"pubmed_screening_{timestamp}.csv"
+    output_file = args.output or f"pubmed_screening_{timestamp}.csv"
 
     print("Searching PubMed...")
-    total_count, pmids = search_pubmed(query)
+    total_count, pmids = search_pubmed(query, email=args.email)
     print(f"PubMed reports {total_count} matching articles.")
 
     if total_count > MAX_RESULTS:
@@ -269,7 +296,7 @@ def main():
         print("No matching articles were found.")
         return
 
-    articles = fetch_articles(pmids)
+    articles = fetch_articles(pmids, email=args.email)
     count = write_csv(articles, output_file)
     print(f"Done. Wrote {count} articles to {output_file}")
 

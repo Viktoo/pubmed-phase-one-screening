@@ -1,0 +1,16 @@
+# Screening exports created by running the tool (kept out of version control).
+# The curated sample in example_outputs/ is committed on purpose (see below).
+/pubmed_screening_*.csv
+pubmed_screening_*.csv
+!example_outputs/
+
+# Python housekeeping
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Editor / OS clutter
+.DS_Store
+.vscode/
+.idea/

@@ -4,11 +4,7 @@
 
 ## What it does
 
-This tool searches [PubMed](https://pubmed.ncbi.nlm.nih.gov/) for you and saves every match to a CSV, with authors, title, abstract, journal, year, DOI, and link all filled in. It also adds three blank columns for you to fill in while screening:
-
-- **Screening Decision**: Include / Exclude / Maybe
-- **Exclusion Reason**: e.g. "wrong population", "not English"
-- **Screening Notes**: anything for you or your team
+This tool searches [PubMed](https://pubmed.ncbi.nlm.nih.gov/) for you and saves every match to a CSV, with authors, title, abstract, journal, year, DOI, and link all filled in. 
 
 Open the CSV in Excel, Numbers, or Google Sheets and start screening. A real sample is in [`example_outputs/`](example_outputs/).
 

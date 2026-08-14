@@ -32,6 +32,16 @@ TOOL_NAME = "pubmed_phase1_screening_export"
 MAX_RESULTS = 10_000
 BATCH_SIZE = 100
 
+# Friendly --sort choices mapped to PubMed's own sort values. These match the
+# "Sort by" dropdown on the PubMed website.
+SORT_OPTIONS = {
+    "recent": "date",          # "Most recent" (date added to PubMed). Default.
+    "relevance": "relevance",  # "Best match".
+    "pubdate": "pub_date",     # "Publication date" (the printed date).
+    "author": "Author",        # "First author", A to Z.
+    "journal": "JournalName",  # "Journal", A to Z.
+}
+
 DEFAULT_QUERY = """
 ("financial decision making" OR
  "behavioral economics" OR
@@ -56,13 +66,18 @@ AND
  "aging")
 """.strip()
 
-FIELDNAMES = [
+# Simple mode exports only these three columns, in this order.
+SIMPLE_FIELDNAMES = [
+    "Authors",
+    "Title",
+    "Abstract",
+]
+
+# Full mode leads with the same three columns, then everything else.
+FIELDNAMES = SIMPLE_FIELDNAMES + [
     "PMID",
     "DOI",
     "PubMed URL",
-    "Title",
-    "Abstract",
-    "Authors",
     "Publication Year",
     "Journal",
     "Publication Types",
@@ -103,7 +118,7 @@ def unique_join(values, separator="; "):
     return separator.join(dict.fromkeys(value for value in values if value))
 
 
-def search_pubmed(query, email=EMAIL):
+def search_pubmed(query, email=EMAIL, sort="date"):
     root = request_xml(
         "esearch.fcgi",
         {
@@ -111,7 +126,7 @@ def search_pubmed(query, email=EMAIL):
             "term": query,
             "retmode": "xml",
             "retmax": MAX_RESULTS,
-            "sort": "pub date",
+            "sort": sort,
         },
         email=email,
     )
@@ -234,10 +249,10 @@ def parse_article(article):
     }
 
 
-def write_csv(articles, output_file):
+def write_csv(articles, output_file, fieldnames=FIELDNAMES):
     rows = [row for article in articles if (row := parse_article(article))]
     with open(output_file, "w", newline="", encoding="utf-8-sig") as file:
-        writer = csv.DictWriter(file, fieldnames=FIELDNAMES)
+        writer = csv.DictWriter(file, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(rows)
     return len(rows)
@@ -274,6 +289,17 @@ def main():
         default=None,
         help="Output CSV path (default: pubmed_screening_<timestamp>.csv).",
     )
+    parser.add_argument(
+        "--simple",
+        action="store_true",
+        help="Export only Authors, Title, and Abstract columns.",
+    )
+    parser.add_argument(
+        "--sort",
+        choices=SORT_OPTIONS,
+        default="recent",
+        help="Result order: recent (default), relevance, pubdate, author, journal.",
+    )
     args = parser.parse_args()
 
     if args.start_year > args.end_year:
@@ -287,7 +313,9 @@ def main():
     output_file = args.output or f"pubmed_screening_{timestamp}.csv"
 
     print("Searching PubMed...")
-    total_count, pmids = search_pubmed(query, email=args.email)
+    total_count, pmids = search_pubmed(
+        query, email=args.email, sort=SORT_OPTIONS[args.sort]
+    )
     print(f"PubMed reports {total_count} matching articles.")
 
     if total_count > MAX_RESULTS:
@@ -297,7 +325,8 @@ def main():
         return
 
     articles = fetch_articles(pmids, email=args.email)
-    count = write_csv(articles, output_file)
+    fieldnames = SIMPLE_FIELDNAMES if args.simple else FIELDNAMES
+    count = write_csv(articles, output_file, fieldnames=fieldnames)
     print(f"Done. Wrote {count} articles to {output_file}")
 
 

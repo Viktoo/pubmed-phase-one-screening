@@ -34,14 +34,24 @@ Put your search in quotes after `--query`. This is exactly what you'd type into 
 python3 pubmed_screening.py --query "(migraine[Title/Abstract]) AND children"
 ```
 
-Other options:
+## All options
+
+Add any of these after the command. Combine as many as you like.
+
+| Option | What it does |
+| --- | --- |
+| `--query "..."` | Your PubMed search, in quotes (same as the website search box). |
+| `--simple` | Export only Authors, Title, and Abstract (no other columns). |
+| `--sort recent` | Result order. Choices: `recent` (default), `relevance`, `pubdate`, `author`, `journal`. |
+| `--start-year 2015` | Earliest publication year to include (default: 2019). |
+| `--end-year 2024` | Latest publication year to include (default: this year). |
+| `--output name.csv` | Save to a filename you choose. |
+| `--help` | List every option and exit. |
+
+For example, a simple export of the 10 most recent years, sorted by best match:
 
 ```bash
-python3 pubmed_screening.py --simple                            # only Authors, Title, Abstract
-python3 pubmed_screening.py --sort relevance                    # order: recent (default), relevance, pubdate, author, journal
-python3 pubmed_screening.py --start-year 2015 --end-year 2024   # change the years
-python3 pubmed_screening.py --output my_review.csv              # pick the filename
-python3 pubmed_screening.py --help                              # see everything
+python3 pubmed_screening.py --simple --start-year 2015 --sort relevance
 ```
 
 ## Good to know

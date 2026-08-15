@@ -2,6 +2,12 @@
 
 **Turn a PubMed search into a spreadsheet with one command.** No accounts, no keys, nothing to install.
 
+<a href="https://youtu.be/ZMCdlQ_UhwQ">
+  <img src="docs/walkthrough.png" alt="Watch the 1-minute walkthrough" width="640">
+</a>
+
+▶️ **[Watch the 1-minute walkthrough](https://youtu.be/ZMCdlQ_UhwQ)**
+
 ## What it does
 
 This tool searches [PubMed](https://pubmed.ncbi.nlm.nih.gov/) for you and saves every match to a CSV, with authors, title, abstract, journal, year, DOI, and link all filled in. 
